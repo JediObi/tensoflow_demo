@@ -59,39 +59,51 @@ print("first prediction: ", np.argmax(predictions[0]))
 print("first real label: ", test_labels[0])
 
 # 打印图片和预测结果（最高概率分类），并把预测结果语义化
-
 def plot_image(i, predictions_array, true_label, img):
+    # 
     predictions_array, true_label, img = predictions_array[i], true_label[i], img[i]
+    # 网格关掉
     plt.grid(False)
+    # 坐标轴刻度
     plt.xticks([])
     plt.yticks([])
 
+    # 显示图片
     plt.imshow(img, cmap=plt.cm.binary)
 
+    # 预测最大概率的结果
     predicted_label = np.argmax(predictions_array)
+    # 如果预测结果与真实标签相同则显示蓝色，不相同则显示红色
     if predicted_label == true_label:
         color = 'blue'
     else:
         color = 'red'
-    
-    plt.xlabel("{} {:2.0f}% ({})".format(class_names[predicted_label],100*np.max(predictions_array),class_names[predicted_label]), color=color)
+    # 设置x轴名称， 预测结果， 预测概率最大值，括号里展示真实标签， 如果预测正确文字为蓝色，如果预测错误文字为红色 
+    plt.xlabel("{} {:2.0f}% ({})".format(class_names[predicted_label],100*np.max(predictions_array),class_names[true]), color=color)
 
 def plot_value_array(i, predictions_array, true_label):
     predictions_array, true_label = predictions_array[i], true_label[i]
     plt.grid(False)
     plt.xticks([])
     plt.yticks([])
+    # 产生10个柱图，展示预测概率，颜色为灰色
     thisplot = plt.bar(range(10),predictions_array, color = '#777777')
+    # y轴上下线
     plt.ylim([0,1])
+    # 取预测结果最大值的标签
     predicted_label = np.argmax(predictions_array)
 
+    # 预测结果标签对应的柱图设置为红色，前边的柱图有十个柱子对应了0-9的标签
     thisplot[predicted_label].set_color('red')
+    # 真实标签对应的柱图设置为绿色
     thisplot[true_label].set_color('green')
 
 i = 0
 plt.figure(figsize=(6,3))
 plt.subplot(1,2,1)
+# 展示第一个图形，和它的预测结果，x轴红色字体为错误，蓝色为正确
 plot_image(i,predictions, test_labels, test_images)
+# 创建一个subplot，展示第一个图形的预测概率柱图，灰色是普通概率，红色是预测概率，蓝色是真实标签对应的柱状图的预测概率
 plt.subplot(1,2,2)
 plot_value_array(i,predictions,test_labels)
 plt.show()
