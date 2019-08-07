@@ -2,6 +2,7 @@ import tensorflow as tf
 from tensorflow import keras
 
 import numpy as np
+import matplotlib.pyplot as plt
 
 imdb = keras.datasets.imdb
 
@@ -70,4 +71,39 @@ history = model.fit(partial_x_train, partial_y_train, epochs=40, batch_size=512,
 results = model.evaluate(test_data, test_labels)
 print(results)
 
-# 创建准确率和损失值随时间变化的函数
+# 创建准确率和损失值随时间变化的图
+history_dict = history.history
+# 准确率
+acc = history_dict['acc']
+# 验证集准确率
+val_acc = history_dict['val_acc']
+# 损失值
+loss = history_dict['loss']
+# 验证集损失值
+val_loss = history_dict['val_loss']
+
+# 迭代次数， [start, stop)
+epochs = range(1, len(acc)+1)
+
+# 损失值随迭代次数变化，蓝色点
+plt.plot(epochs, loss, 'bo', label='Training loss')
+
+# 验证集损失值随迭代次数的变化，蓝色实线
+plt.plot(epochs, val_loss, 'b', label='Validation loss')
+plt.title('Training and validation loss')
+plt.xlabel('Epochs')
+plt.ylabel('Loss')
+# 默认所有图例
+plt.legend()
+
+plt.show()
+
+# 创建准确率随迭代次数的变化图
+plt.clf()
+plt.plot(epochs, acc, 'bo', label='Training acc')
+plt.plot(epochs, val_acc, 'b', label='Validation loss')
+plt.title('Training and validation accuracy')
+plt.xlabel('Epochs')
+plt.ylabel('Accuracy')
+plt.legend()
+plt.show()
