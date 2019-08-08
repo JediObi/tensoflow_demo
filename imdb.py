@@ -30,7 +30,7 @@ print(decode_review(train_data[0]))
 # 由于影评的长短不一， 神经网络需要相同长度的输入
 # 使用最大长度填充，影评有最大长度，以此为标准，把长度不足的后续补0
 # 在官网的demo中提到过独热编码（但是没使用），因为独热编码会把一个特征值序列化为特征空间长度的二进制，索引位为1，其他位为0
-# 但是不理解官网的解释，为什么独热编码是num_words*num_reviews的张量，而填充则是man_length*num_reviews
+# 按照官网的意思以及后续过拟合的demo，可知此处的one-hot编码会把影评内容转化到10000长度的特征空间上，这会导致重复的词只出现一次
 # 独热编码: 比如某个特征空间有10个值，那么该特征出现时，可以用一个10位寄存器表示(索引位为1，其他位为0)
 train_data = keras.preprocessing.sequence.pad_sequences(train_data, value=word_index["<PAD>"], padding="post", maxlen=256)
 

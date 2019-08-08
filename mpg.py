@@ -6,7 +6,7 @@ import seaborn as sns
 
 import tensorflow as tf
 from tensorflow import keras
-from tensorflow.python.keras import layers
+from tensorflow.keras import layers
 
 print(tf.__version__)
 
@@ -23,7 +23,7 @@ print(dataset.tail())
 # 统计空数据
 print(dataset.isna().sum())
 # 删除空数据
-dataset.dropna()
+dataset = dataset.dropna()
 # 弹出Origin列
 origin = dataset.pop('Origin')
 # 对origin列数据处理， 分成USA, Europe，Japan，并转换成one-hot编码
@@ -70,7 +70,7 @@ def build_model():
 
     # 使用RMSprop 随机梯度下降
     optimizer = tf.keras.optimizers.RMSprop(0.001)
-
+    # 损失函数使用mse， 评估使用mae和mse（将会记录每次迭代这两个值）
     model.compile(loss='mean_squared_error', optimizer=optimizer, metrics=['mean_absolute_error', 'mean_squared_error'])
 
     return model
@@ -79,21 +79,93 @@ model = build_model()
 # 打印模型基本信息
 model.summary()
 
+# 提取前十个， 用初始模型预测下
 example_batch = normed_train_data[:10]
 example_result = model.predict(example_batch)
 print(example_result)
 
+# 设置一个回调，打印进度
 class PrintDot(keras.callbacks.Callback):
     def on_epoch_end(self, epoch, logs):
-        if epoch % 100 == 0:
-            print('')
+        if epoch % 100 == 0: print('')
         print('.', end='')
 EPOCHS = 1000
+# 设置验证集为训练集的20%
 history = model.fit(
     normed_train_data, train_labels,
     epochs=EPOCHS, validation_split=0.2, verbose=0, callbacks=[PrintDot()]
 )
 
+print("\n")
+# 把训练history转换成DataFrame
 hist = pd.DataFrame(history.history)
+# 把迭代次数传给DataFrame
 hist['epoch'] = history.epoch
 print(hist.tail())
+
+# 打印训练过程中的评估值mse和mae
+def plot_history(history):
+    hist = pd.DataFrame(history.history)
+    hist['epoch'] = history.epoch
+
+    # 创建一个新窗口
+    plt.figure()
+    # 迭代次数为x轴
+    plt.xlabel("Epoch")
+    # y轴展示mae
+    plt.ylabel("Mean Abs Error [MPG]")
+    # 绘制一个实线图 训练集上的epoch-mae
+    plt.plot(hist['epoch'], hist['mean_absolute_error'], label='Train Error')
+    # 绘制一个实线图 验证集上的epoch-mae
+    plt.plot(hist['epoch'], hist['val_mean_absolute_error'], label='Val Error')
+    # y轴0-5
+    plt.ylim([0, 5])
+    plt.legend()
+
+    # 创建新窗口展示训练集和验证集各自的epoch-mse
+    plt.figure()
+    plt.xlabel("Epoch")
+    plt.ylabel("Mean Square Error [MPG]")
+    plt.plot(hist['epoch'], hist['mean_squared_error'], label='Train Error')
+    plt.plot(hist['epoch'], hist['val_mean_squared_error'], label='Val Error')
+    plt.ylim([0, 20])
+    plt.legend()
+    plt.show()
+
+plot_history(history)
+
+# 由于第一个模型在验证集上出现了mse和mae上升，所以认为出现过拟合
+# 新的模型增加一个early_stop回调，用于在patience迭代内验证集损失函数不下降就提前终止训练，以防止过拟合
+model2 = build_model()
+early_stop = keras.callbacks.EarlyStopping(monitor="val_loss", patience=10)
+history2 = model2.fit(normed_train_data, train_labels, epochs=EPOCHS, validation_split=0.2, verbose=0, callbacks=[early_stop, PrintDot()])
+
+plot_history(history2)
+
+# 使用测试集评估下新模型
+loss, mae, mse = model2.evaluate(normed_test_data, test_labels, verbose=0)
+# 打印mae
+print("Testing set Mean Absolute Error: {:5.2f} MPG".format(mae))
+
+# 使用新模型预测测试集
+test_predictions = model2.predict(normed_test_data).flatten()
+# 绘制测试集y-y^散点
+plt.scatter(test_labels, test_predictions)
+plt.xlabel("True Values [MPG]")
+plt.ylabel("Predictions [MPG]")
+# 两个坐标轴刻度相同
+plt.axis("equal")
+# 坐标系限制为方形
+plt.axis("square")
+plt.xlim([0, plt.xlim()[1]])
+plt.ylim([0, plt.ylim()[1]])
+# 绘制一个45度分界线，因为真实值和预测值基本接近，所以应该都聚拢在这条分界线上
+_ = plt.plot([-100, 100], [-100, 100])
+plt.show()
+
+# 预测差值的分布柱状图，基本上是一个均值为0的高斯分布，符合训练的预期
+error = test_predictions - test_labels
+plt.hist(error, bins=25)
+plt.xlabel("Prediction Error [MPG]")
+_ = plt.ylabel("Count")
+plt.show()
