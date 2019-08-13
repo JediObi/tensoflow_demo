@@ -56,7 +56,7 @@ bigger_model.summary()
 
 bigger_history = bigger_model.fit(train_data, train_labels, epochs=20, batch_size=512, validation_data=(test_data, test_labels), verbose=2)
 
-# 构建图表
+# 构建图表, 展示训练集和验证集的损失函数值
 def plot_history(histories, key='binary_crossentropy'):
     plt.figure(figsize=(16,10))
     
@@ -77,6 +77,8 @@ plot_history([
     ('bigger', bigger_history)
 ])
 
+# l2正则化的模型， 防止过拟合
+# l1,l2正则化的作用， 模型的复杂度(模型的熵)由参数数量和参数值决定，无法修改参数数量就减小参数值，l1符合拉普拉斯分布会出现一些坐标轴上的值(会导致某些维度值为0)，l2正则化会使参数值一直减小(权值衰减)
 l2_model = keras.Sequential([
     keras.layers.Dense(16, kernel_regularizer=keras.regularizers.l2(0.001), activation=tf.nn.relu, input_shape=(NUM_WORDS, )),
     keras.layers.Dense(16, kernel_regularizer=keras.regularizers.l2(0.001), activation=tf.nn.relu),
@@ -86,7 +88,27 @@ l2_model = keras.Sequential([
 l2_model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy', 'binary_crossentropy'])
 
 l2_model_history = l2_model.fit(train_data, train_labels, epochs=20, batch_size=512, validation_data=(test_data, test_labels), verbose=2)
+# 比较l2和普通模型交叉熵的收敛，可见l2正则化后，在验证集上损失函数值比普通模型更小，泛华性更好
 plot_history([
     ('baseline', baseline_history),
     ('l2', l2_model_history)
+])
+
+
+# 使用丢弃层(Dropout)， 防止过拟合， 在验证集上的损失要小于base版本，与l2差不多
+# 丢弃是有Hinton和他的学生们发明的算法， 在训练时随机把本层的某些输出置0，就是丢弃， 而在测试时不丢弃，只是把本层的输出按等同于丢弃率的比例进行缩减
+dpt_model = keras.Sequential([
+    keras.layers.Dense(16, activation=tf.nn.relu, input_shape=(NUM_WORDS, )),
+    keras.layers.Dropout(0.5),
+    keras.layers.Dense(16, activation=tf.nn.relu),
+    keras.layers.Dropout(0.5),
+    keras.layers.Dense(1, activation=tf.nn.sigmoid)
+])
+dpt_model.compile(optimizer='adam', loss='binary_crossentropy',metrics=['accuracy', 'binary_crossentropy'])
+dpt_model_history = dpt_model.fit(train_data, train_labels, epochs=20, batch_size=512, validation_data=(test_data, test_labels), verbose=2)
+
+plot_history([
+    ('baseline', baseline_history),
+    ('l2', l2_model_history),
+    ('dropout', dpt_model_history)
 ])
