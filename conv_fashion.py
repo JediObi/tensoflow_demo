@@ -1,5 +1,6 @@
 '''
-本文的全连接神经网络在fashion-mnist训练集上的正确率可以达到89%,损失0.29, 在测试集上的正确率可以达到87%,损失0.35
+本文的2D卷积神经网络在fashion-mnist训练集上的正确率可以达到94%,损失0.16, 在测试集上的正确率可以达到92%，损失0.24
+使用1D卷积层神经网络训练集正确率91%，损失0.25，测试集上正确率89%，损失0.30
 '''
 import tensorflow as tf
 from tensorflow import keras
@@ -7,7 +8,7 @@ from tensorflow import keras
 import numpy as np
 import matplotlib.pyplot as plt
 
-# 打印tensorflow版本
+# 打印tensorflow版本89
 print("tensorflow版本: ",tf.__version__)
 
 # 导入数据集
@@ -15,8 +16,7 @@ fashion_mnist = keras.datasets.fashion_mnist
 
 # 加载训练集和验证集
 (train_images, train_labels), (test_images, test_labels) = fashion_mnist.load_data()
-
-# 衣物名称，样本标签是0-9的数字不含语义
+# 衣物名称，样本标签是0-9的数字不含语义sunshi
 class_names = ['T-shirt/top', 'Trouser', 'Pullover', 'Dress', 'Coat', 'Sandal', 'Shirt', 'Sneaker', 'Bag', 'Ankle boot']
 
 # plt.figure()
@@ -29,9 +29,21 @@ class_names = ['T-shirt/top', 'Trouser', 'Pullover', 'Dress', 'Coat', 'Sandal', 
 train_images = train_images / 255.0
 test_images = test_images / 255.0
 
+# 由于使用2D卷积，所以把图片的通道信息加上，由于使用的是单通道，所以直接用1
+# train_images = train_images.reshape(train_images.shape[0], 28,28,1)
+# test_images = test_images.reshape(test_images.shape[0], 28,28,1)
+
+# 使用2D卷积层， 第一层使用32个滤波器（相当于输出深度32）， 
+# input_shape第一层时必须指定这个参数，训练集原始shape(60000,28,28)，2D需要输入图像(长，宽，通道)，
+# 灰度图像只有一个通道，所以相对于dataformat=channels_last，reshape为(60000,28,28,1)
+# 可以考虑1D卷积层，kernel为一维，inputshape二维的情形
 # 创建模型，Flatten层第一层输入层扁平化多维数组为一维， Dense第一层全连接层，128个神经元所以输出也是128个使用relu，第三层Dense10个神经元作为输出层使用softmax计算概率
 model = keras.Sequential([
-    keras.layers.Flatten(input_shape=(28,28)),
+    keras.layers.Conv1D(32, 3, padding='same', activation=tf.nn.relu, input_shape=(28, 28)),
+    keras.layers.MaxPooling1D(2, strides=2),
+    keras.layers.Conv1D(64, 3, padding='same', activation=tf.nn.relu),
+    keras.layers.MaxPooling1D(2, strides=2),
+    keras.layers.Flatten(),
     keras.layers.Dense(128, activation = tf.nn.relu),
     keras.layers.Dense(10, activation = tf.nn.softmax)
 ])
@@ -65,6 +77,7 @@ print("first real label: ", test_labels[0])
 def plot_image(i, predictions_array, true_label, img):
     # 
     predictions_array, true_label, img = predictions_array[i], true_label[i], img[i]
+    # img = img.reshape((28,28))
     # 网格关掉
     plt.grid(False)
     # 坐标轴刻度
